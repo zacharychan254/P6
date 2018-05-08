@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+svg{
+  display: block;
+  max-width: 100%;
+}
+
+h2{
+  text-align: center;
+}
+
+body {
+  font: 13px sans-serif;
+}
+
+.bar rect {
+  shape-rendering: crispEdges;
+}
+
+.bar text {
+  fill: #999999;
+}
+
+.axis path, .axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+
+
+}
+
+circle {
+  stroke: #000;
+}
+
+.tooltip {
+  position: absolute;
+  width: 200px;
+  height: 28px;
+  pointer-events: none;
+}
+
+</style>
+
+<body>
+  <div id="area1"></div>
+
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<select id="inds">
+    <option value="all" selected="selected">All</option>
+    <option value="R">Right Hand</option>
+    <option value="L">Left Hand</option>
+    <option value="B">Both Hands</option>
+</select>
+
+  <div id="area2"></div>
+  <div id="area3"></div>
+
+<script>
+
+
+var color = "steelblue";
+
+// Generate a 1000 data points using normal distribution with mean=20, deviation=5
+
+
+// A formatter for counts.
+
+var margin = {top: 20, right: 30, bottom: 30, left: 30},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+var sc_width = 960 - margin.left - margin.right,
+    sc_height = 500 - margin.top - margin.bottom;
+
+d3.select("#area3")
+          .append("h3")
+          .text("HR and Height Scatter");
+
+var svg2 = d3.select("#area3").append("svg")
+            .attr("width", sc_width + margin.left + margin.right)
+            .attr("height", sc_height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+
+function draw(data) {
+
+
+  //Bar Chart
+    var original_data = data;
+
+
+
+    //scatter plot HR and Height =========================================
+
+    var xValue = function(d) { return d.height;}, // data -> value
+        xScale = d3.scale.linear().domain([d3.min]).range([0, sc_width]), // value -> display
+        xMap = function(d) { return xScale(xValue(d));}, // data -> display
+        sc_xAxis = d3.svg.axis().scale(xScale).orient("bottom");
+
+    // setup y
+    var yValue = function(d) { return d.HR;}, // data -> value
+        yScale = d3.scale.linear().range([sc_height, 0]), // value -> display
+        yMap = function(d) { return yScale(yValue(d));}, // data -> display
+        sc_yAxis = d3.svg.axis().scale(yScale).orient("left");
+
+    // setup fill color
+    var cValue = function(d) { return d['handedness'];},
+        sc_color = d3.scale.category10();
+
+    var tooltip = d3.select("#area3").append("div")
+                    .attr("class", "tooltip")
+                    .style("opacity", 0);
+
+    xScale.domain([d3.min(data, xValue)-1, d3.max(data, xValue)+1]);
+    yScale.domain([d3.min(data, yValue)-1, d3.max(data, yValue)+1]);
+
+    // x-axis
+
+
+  svg2.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + sc_height + ")")
+      .call(sc_xAxis)
+    .append("text")
+      .attr("class", "label")
+      .attr("x", width)
+      .attr("y", -6)
+      .style("text-anchor", "end")
+      .text("Players Height");
+
+  // y-axis
+  svg2.append("g")
+      .attr("class", "y axis")
+      .call(sc_yAxis)
+    .append("text")
+      .attr("class", "label")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text("HR");                   
+
+
+
+        svg2.append('g').selectAll("circle")
+            .data(data)
+            .enter()
+            .append("circle")
+            .attr("r", 3.5)
+            .attr("cx", xMap)
+            .attr("cy", yMap)
+            .style("fill", function(d) { return sc_color(cValue(d));}) 
+            .on("mouseover", function(d) {
+                tooltip.transition()
+                     .duration(200)
+                     .style("opacity", .9);
+                tooltip.html(d["name"] + "<br/> (" + xValue(d) 
+                + ", " + yValue(d) +", "+ d['handedness']+")")
+                     .style("left", (d3.event.pageX + 5) + "px")
+                     .style("top", (d3.event.pageY - 28) + "px");
+            })
+            .on("mouseout", function(d) {
+                tooltip.transition()
+                     .duration(500)
+                     .style("opacity", 0);
+            });
+
+    // draw legend
+  var legend = svg2.selectAll(".legend")
+      .data(sc_color.domain())
+    .enter().append("g")
+      .attr("class", "legend")
+      .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+  // draw legend colored rectangles
+  legend.append("rect")
+      .attr("x", width - 18)
+      .attr("width", 18)
+      .attr("height", 18)
+      .style("fill", sc_color);
+
+  // draw legend text
+  legend.append("text")
+      .attr("x", width - 24)
+      .attr("y", 9)
+      .attr("dy", ".35em")
+      .style("text-anchor", "end")
+      .text(function(d) { return d;})  
+
+  //scatter plot HR and Height =========================================
+    d3.select("#inds")
+    .on("change", function(){
+    data = original_data;
+    var sect = document.getElementById("inds");
+    var section = sect.options[sect.selectedIndex].value;
+    if (section == "all") {
+        data;
+        } else {
+          data = data.filter(function(d){
+            return d['handedness'] == section;
+
+          });
+          };
+    if (section == "R"){
+      var Hand = "Right"
+    } else if (section == "L"){
+      var Hand = "Left"
+    } else {
+      var Hand = "Both"
+    };
+
+
+    var circles = svg2.selectAll('circle')
+        .data(data);
+
+      circles.exit().remove();
+    
+    circles.enter()
+           .append('circle')
+           .attr("r", 0);
+           
+            
+    circles.transition()
+            .attr("r", 3.5)
+            .attr("cx", xMap)
+            .attr("cy", yMap)
+           .style("fill", function(d) { return sc_color(cValue(d));
+           }) ;
+
+
+});
+};
+
+d3.csv("baseball_data.csv", function(d){
+  d['height'] = +d['height'];
+  d["weight"] = +d["weight"];
+  d["avg"] = +d["avg"];
+  d["HR"] = +d["HR"];
+  return d
+}, draw);
+
+
+</script>
+</body>
+</html>
